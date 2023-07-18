@@ -26,10 +26,10 @@ describe('Resource', () => {
   })
 
   beforeEach(async () => {
-    resource = new Resource(Car)
-    await Car.delete({})
-    await CarDealer.delete({})
-    await CarBuyer.delete({})
+    resource = new Resource({ model: Car, dataSource: dataSource })
+    await dataSource.getRepository(Car).delete({})
+    await dataSource.getRepository(CarDealer).delete({})
+    await dataSource.getRepository(CarBuyer).delete({})
   })
 
   after(async () => {
@@ -38,11 +38,11 @@ describe('Resource', () => {
 
   describe('.isAdapterFor', () => {
     it('returns true when Entity is give', () => {
-      expect(Resource.isAdapterFor(Car)).to.equal(true)
+      expect(Resource.isAdapterFor({ model: Car, dataSource: dataSource })).to.equal(true)
     })
 
     it('returns false for any other kind of resources', () => {
-      expect(Resource.isAdapterFor({ Car: true })).to.equal(false)
+      expect(Resource.isAdapterFor({ Car: true } as any)).to.equal(false)
     })
   })
 
@@ -140,7 +140,7 @@ describe('Resource', () => {
       const params = await resource.create(data)
       const reference: any = {}
       reference[resource.idName()] = params.carId
-      const storedRecord: Car | null = await Car.findOneBy(reference)
+      const storedRecord: Car | null = await dataSource.getRepository(Car).findOneBy(reference)
 
       expect(storedRecord?.streetNumber).to.equal(data.streetNumber)
     })
@@ -149,7 +149,7 @@ describe('Resource', () => {
       const params = await resource.create(data)
       const reference: any = {}
       reference[resource.idName()] = params.carId
-      const storedRecord: Car | null = await Car.findOneBy(reference)
+      const storedRecord: Car | null = await dataSource.getRepository(Car).findOneBy(reference)
 
       expect(storedRecord?.stringAge).to.equal(4)
     })
@@ -158,7 +158,7 @@ describe('Resource', () => {
       const params = await resource.create(data)
       const reference: any = {}
       reference[resource.idName()] = params.carId
-      const storedRecord: Car | null = await Car.findOneBy(reference)
+      const storedRecord: Car | null = await dataSource.getRepository(Car).findOneBy(reference)
 
       expect(storedRecord?.meta).to.deep.equal({
         title: data['meta.title'],
@@ -242,11 +242,11 @@ describe('Resource', () => {
     let carBuyer: CarBuyer
     let carParams
     beforeEach(async () => {
-      carDealer = CarDealer.create({ name: 'dealPimp' })
-      await carDealer.save()
+      carDealer = dataSource.getRepository(CarDealer).create({ name: 'dealPimp' })
+      await dataSource.getRepository(CarDealer).save(carDealer)
 
-      carBuyer = CarBuyer.create({ name: 'johnDoe' })
-      await carBuyer.save()
+      carBuyer = dataSource.getRepository(CarBuyer).create({ name: 'johnDoe' })
+      await dataSource.getRepository(CarBuyer).save(carBuyer)
     })
 
     it('creates new resource', async () => {
@@ -273,14 +273,14 @@ describe('Resource', () => {
     let carParams
 
     beforeEach(async () => {
-      carDealer = CarDealer.create({ name: 'dealPimp' })
-      await carDealer.save()
+      carDealer = dataSource.getRepository(CarDealer).create({ name: 'dealPimp' })
+      await dataSource.getRepository(CarDealer).save(carDealer)
       carParams = await resource.create({ ...data, carDealerId: carDealer.id })
     })
 
     afterEach(async () => {
-      await Car.delete(carParams.carId)
-      await CarDealer.delete(carDealer.id)
+      await dataSource.getRepository(Car).delete(carParams.carId)
+      await dataSource.getRepository(CarDealer).delete(carDealer.id)
     })
 
     it('deletes the resource', async () => {
@@ -289,7 +289,7 @@ describe('Resource', () => {
     })
 
     it('throws validation error when deleting record to which other record is related', async () => {
-      const carDealerResource = new Resource(CarDealer)
+      const carDealerResource = new Resource({ model: CarDealer, dataSource: dataSource })
       try {
         await carDealerResource.delete(carDealer.id)
       } catch (error) {

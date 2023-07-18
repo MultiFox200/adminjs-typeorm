@@ -1,6 +1,7 @@
 /* eslint-disable no-unused-expressions */
 // eslint-disable-next-line import/no-extraneous-dependencies
 import 'reflect-metadata'
+import 'dotenv/config.js'
 import { DataSource } from 'typeorm'
 
 export const dataSource = new DataSource({

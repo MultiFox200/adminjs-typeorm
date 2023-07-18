@@ -162,3 +162,5 @@ lib
 .adminjs
 
 example-app/cypress/videos
+
+.idea/

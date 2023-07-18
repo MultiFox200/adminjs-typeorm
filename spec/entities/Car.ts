@@ -1,6 +1,5 @@
 import { IsDefined, Max, Min } from 'class-validator'
 import {
-  BaseEntity,
   Column,
   CreateDateColumn,
   Entity,
@@ -20,7 +19,7 @@ export enum CarType {
 }
 
 @Entity()
-export class Car extends BaseEntity {
+export class Car {
   @PrimaryGeneratedColumn()
   public carId: number
 

@@ -23,7 +23,6 @@ Resource.validate = validate
 
 ```typescript
 import {
-  BaseEntity,
   Entity, PrimaryGeneratedColumn, Column,
   ManyToOne,
   RelationId
@@ -40,7 +39,7 @@ Resource.validate = validate
 AdminJS.registerAdapter({ Database, Resource })
 
 @Entity()
-export class Person extends BaseEntity
+export class Person
 {
   @PrimaryGeneratedColumn()
   public id: number;
@@ -72,7 +71,7 @@ export class Person extends BaseEntity
   const adminJs = new AdminJS({
     // databases: [MyDataSource],
     resources: [
-      { resource: Person, options: { parent: { name: 'foobar' } } }
+      { resource: { model: Person, dataSource: MyDataSource }, options: { parent: { name: 'foobar' } } }
       ],
     rootPath: '/admin',
   })

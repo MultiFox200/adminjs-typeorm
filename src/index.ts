@@ -40,7 +40,6 @@
  *
  * ```
  * import {
- *     BaseEntity,
  *     Entity, PrimaryGeneratedColumn, Column,
  *     createConnection,
  *     ManyToOne,
@@ -57,7 +56,7 @@
  * AdminJS.registerAdapter({ Database, Resource });
  *
  * \@Entity()
- * export class Person extends BaseEntity
+ * export class Person
  * {
  *     \@PrimaryGeneratedColumn()
  *     public id: number;
@@ -80,13 +79,9 @@
  * {
  *     const connection = await createConnection({...});
  *
- *     // Applying connection to model
- *     Person.useConnection(connection);
- *
  *     const adminJs = new AdminJS({
- *         // databases: [connection],
  *         resources: [
- *             { resource: Person, options: { parent: { name: 'foobar' } } }
+ *             { resource: { model: Person, connection }, options: { parent: { name: 'foobar' } } }
  *         ],
  *         rootPath: '/admin',
  *     });

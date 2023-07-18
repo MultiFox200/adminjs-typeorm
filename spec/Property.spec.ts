@@ -13,11 +13,11 @@ describe('Property', () => {
   })
 
   beforeEach(() => {
-    columns = Car.getRepository().metadata.columns
+    columns = dataSource.getRepository(Car).metadata.columns
   })
 
   after(async () => {
-    await Car.delete({})
+    await dataSource.getRepository(Car).delete({})
     dataSource.destroy()
   })
 

@@ -1,6 +1,6 @@
 /* eslint-disable no-param-reassign */
 import { BaseRecord, BaseResource, Filter, flat, ValidationError } from 'adminjs'
-import { BaseEntity, In } from 'typeorm'
+import { EntityTarget, DataSource, In, ObjectLiteral, BaseEntity } from 'typeorm'
 
 import { Property } from './Property.js'
 import { convertFilter } from './utils/filter/filter.converter.js'
@@ -8,38 +8,51 @@ import safeParseNumber from './utils/safe-parse-number.js'
 
 type ParamsType = Record<string, any>;
 
+interface Model {
+  new (): object
+}
+
+export type ResourceDefinition = {
+  model: Model,
+  dataSource: DataSource
+};
+
 export class Resource extends BaseResource {
   public static validate: any
 
-  private model: typeof BaseEntity
+  private definition: ResourceDefinition
 
   private propsObject: Record<string, Property> = {}
 
-  constructor(model: typeof BaseEntity) {
-    super(model)
+  constructor(definition: ResourceDefinition) {
+    super(definition)
 
-    this.model = model
+    this.definition = definition
     this.propsObject = this.prepareProps()
   }
 
+  private get repository() {
+    return this.definition.dataSource.getRepository(this.definition.model)
+  }
+
   public databaseName(): string {
-    return this.model.getRepository().metadata.connection.options.database as string || 'typeorm'
+    return this.repository.metadata.connection.options.database as string || 'typeorm'
   }
 
   public databaseType(): string {
-    return this.model.getRepository().metadata.connection.options.type || 'typeorm'
+    return this.repository.metadata.connection.options.type || 'typeorm'
   }
 
   public name(): string {
-    return this.model.name
+    return this.definition.model.name
   }
 
   public id(): string {
-    return this.model.name
+    return this.definition.model.name
   }
 
   public idName(): string {
-    return this.model.getRepository().metadata.primaryColumns[0].propertyName
+    return this.repository.metadata.primaryColumns[0].propertyName
   }
 
   public properties(): Array<Property> {
@@ -51,7 +64,7 @@ export class Resource extends BaseResource {
   }
 
   public async count(filter: Filter): Promise<number> {
-    return this.model.count(({
+    return this.repository.count(({
       where: convertFilter(filter),
     }))
   }
@@ -63,7 +76,7 @@ export class Resource extends BaseResource {
   ): Promise<Array<BaseRecord>> {
     const { limit = 10, offset = 0, sort = {} } = params
     const { direction, sortBy } = sort
-    const instances = await this.model.find({
+    const instances = await this.repository.find({
       where: convertFilter(filter),
       take: limit,
       skip: offset,
@@ -78,7 +91,7 @@ export class Resource extends BaseResource {
     const reference: any = {}
     reference[this.idName()] = id
 
-    const instance = await this.model.findOneBy(reference)
+    const instance = await this.repository.findOneBy(reference)
     if (!instance) {
       return null
     }
@@ -88,14 +101,14 @@ export class Resource extends BaseResource {
   public async findMany(ids: Array<string | number>): Promise<Array<BaseRecord>> {
     const reference: any = {}
     reference[this.idName()] = In(ids)
-    const instances = await this.model.findBy(reference)
+    const instances = await this.repository.findBy(reference)
 
     return instances.map((instance) => new BaseRecord(instance, this))
   }
 
   public async create(params: Record<string, any>): Promise<ParamsType> {
     const unflattenedParams = flat.unflatten(this.prepareParams(params)) as Record<string, any>
-    const instance = this.model.create(unflattenedParams)
+    const instance = this.repository.create(unflattenedParams)
 
     await this.validateAndSave(instance)
 
@@ -105,7 +118,7 @@ export class Resource extends BaseResource {
   public async update(pk: string | number, params: any = {}): Promise<ParamsType> {
     const reference: any = {}
     reference[this.idName()] = pk
-    const instance = await this.model.findOneBy(reference)
+    const instance = await this.repository.findOneBy(reference)
     if (instance) {
       const preparedParams = flat.unflatten<any, any>(this.prepareParams(params))
       Object.keys(preparedParams).forEach((paramName) => {
@@ -121,9 +134,9 @@ export class Resource extends BaseResource {
     const reference: any = {}
     reference[this.idName()] = pk
     try {
-      const instance = await this.model.findOneBy(reference)
+      const instance = await this.repository.findOneBy(reference)
       if (instance) {
-        await instance.remove()
+        await this.repository.remove(instance)
       }
     } catch (error) {
       if (error.name === 'QueryFailedError') {
@@ -137,7 +150,7 @@ export class Resource extends BaseResource {
   }
 
   private prepareProps() {
-    const { columns } = this.model.getRepository().metadata
+    const { columns } = this.repository.metadata
     return columns.reduce((memo, col, index) => {
       const property = new Property(col, index)
       return {
@@ -189,7 +202,7 @@ export class Resource extends BaseResource {
   }
 
   // eslint-disable-next-line class-methods-use-this
-  async validateAndSave(instance: BaseEntity): Promise<any> {
+  async validateAndSave(instance: object): Promise<any> {
     if (Resource.validate) {
       const errors = await Resource.validate(instance)
       if (errors && errors.length) {
@@ -204,7 +217,7 @@ export class Resource extends BaseResource {
       }
     }
     try {
-      await instance.save()
+      await this.repository.save(instance)
     } catch (error) {
       if (error.name === 'QueryFailedError') {
         throw new ValidationError({
@@ -218,9 +231,12 @@ export class Resource extends BaseResource {
   }
 
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-  public static isAdapterFor(rawResource: any): boolean {
+  public static isAdapterFor(args?: Partial<ResourceDefinition>): boolean {
     try {
-      return !!rawResource.getRepository().metadata
+      const { model, dataSource } = args ?? {}
+      if (!model || !dataSource) return false
+
+      return !!dataSource.getRepository(model).metadata
     } catch (e) {
       return false
     }
