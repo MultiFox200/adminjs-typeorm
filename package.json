@@ -18,6 +18,7 @@
     "admin panel"
   ],
   "scripts": {
+    "postinstall": "tsc",
     "clean": "rm -fR lib",
     "build": "tsc",
     "dev": "yarn clean && tsc -w",
