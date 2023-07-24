@@ -44,11 +44,11 @@ export class Resource extends BaseResource {
   }
 
   public name(): string {
-    return this.definition.model.name
+    return this.repository.metadata.tableName
   }
 
   public id(): string {
-    return this.definition.model.name
+    return this.repository.metadata.tableName
   }
 
   public idName(): string {
