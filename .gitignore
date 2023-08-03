@@ -158,7 +158,7 @@ dist
 
 types
 build
-lib
+#lib
 .adminjs
 
 example-app/cypress/videos
